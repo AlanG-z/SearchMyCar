@@ -1,31 +1,106 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:dondeestacione/src/app.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:dondeestacione/main.dart';
+const _emailField = Key('login-email-field');
+const _passwordField = Key('login-password-field');
+
+Future<void> iniciarSesion(WidgetTester tester) async {
+  await tester.enterText(find.byKey(_emailField), 'conductor@searchmycar.com');
+  await tester.enterText(find.byKey(_passwordField), '123456');
+  await tester.tap(find.text('Iniciar sesión'));
+  await tester.pumpAndSettle();
+}
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  testWidgets('muestra el acceso y valida los campos', (tester) async {
     await tester.pumpWidget(const MyApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.text('SearchMyCar'), findsOneWidget);
+    expect(find.byKey(_emailField), findsOneWidget);
+    expect(find.byKey(_passwordField), findsOneWidget);
+    expect(find.text('Iniciar sesión'), findsOneWidget);
+    expect(find.byType(BottomNavigationBar), findsNothing);
+    expect(find.textContaining('Bienvenido'), findsNothing);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    await tester.tap(find.text('Iniciar sesión'));
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('Ingresa tu correo electrónico'), findsOneWidget);
+    expect(find.text('Ingresa tu contraseña'), findsOneWidget);
+    expect(find.text('Guardar ubicación'), findsNothing);
+  });
+
+  testWidgets('permite ingresar y abre el mapa', (tester) async {
+    await tester.pumpWidget(const MyApp());
+
+    await iniciarSesion(tester);
+
+    expect(find.text('Guardar ubicación'), findsOneWidget);
+    expect(find.text('Mapa'), findsWidgets);
+  });
+
+  testWidgets('la barra inferior abre cada página', (tester) async {
+    await tester.pumpWidget(const MyApp());
+    await iniciarSesion(tester);
+
+    Finder navigationIcon(IconData icon) {
+      return find.descendant(
+        of: find.byType(BottomNavigationBar),
+        matching: find.byIcon(icon),
+      );
+    }
+
+    BottomNavigationBar navigationBar() {
+      return tester.widget<BottomNavigationBar>(
+        find.byType(BottomNavigationBar),
+      );
+    }
+
+    expect(navigationBar().currentIndex, 0);
+
+    await tester.tap(navigationIcon(Icons.edit_outlined));
+    await tester.pumpAndSettle();
+    expect(find.text('Editar vehículo'), findsOneWidget);
+    expect(
+      find.byKey(const Key('vehicle-model-field'), skipOffstage: false),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('vehicle-plate-field'), skipOffstage: false),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('vehicle-color-field'), skipOffstage: false),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('vehicle-brand-field'), skipOffstage: false),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('vehicle-year-field'), skipOffstage: false),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('vehicle-type-field'), skipOffstage: false),
+      findsOneWidget,
+    );
+    expect(navigationBar().currentIndex, 1);
+
+    await tester.tap(navigationIcon(Icons.assignment_outlined));
+    await tester.pumpAndSettle();
+    expect(find.text('Historial de ubicaciones'), findsOneWidget);
+    expect(navigationBar().currentIndex, 2);
+
+    await tester.tap(navigationIcon(Icons.settings_outlined));
+    await tester.pumpAndSettle();
+    expect(find.text('Configuración'), findsOneWidget);
+    expect(navigationBar().currentIndex, 3);
+
+    await tester.tap(navigationIcon(Icons.map_outlined));
+    await tester.pumpAndSettle();
+    expect(find.text('Guardar ubicación'), findsOneWidget);
+    expect(navigationBar().currentIndex, 0);
   });
 }
