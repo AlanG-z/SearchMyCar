@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 class EditarPage extends StatelessWidget {
   const EditarPage({super.key});
 
+
   InputDecoration _campoDecoration({
     required IconData icon,
     required String label,
@@ -29,9 +30,16 @@ class EditarPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+      String _modelo ='';
+  String _patente ='';
+  String _color ='';
+  String _marca ='';
+  
+  String _tipoVehiculo ='';
+  
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Editar vehículo'),
+        title: const Text('Guardar datos del vehículo'),
         backgroundColor: Colors.orange,
         foregroundColor: Colors.white,
       ),
@@ -45,6 +53,8 @@ class EditarPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Text('Ingrese los datos de su vehículo', style: Theme.of(context).textTheme.titleLarge),
+                  Divider(height: 32, thickness: 1.5, color: Colors.grey.shade300),
                   TextFormField(
                     key: const Key('vehicle-model-field'),
                     textCapitalization: TextCapitalization.words,
@@ -54,6 +64,9 @@ class EditarPage extends StatelessWidget {
                       label: 'Modelo',
                       hint: 'Ej. Corolla',
                     ),
+                    onChanged: (value) {
+                      _modelo = value;
+                    },
                   ),
                   const SizedBox(height: 18),
                   TextFormField(
@@ -66,6 +79,9 @@ class EditarPage extends StatelessWidget {
                       label: 'Patente',
                       hint: 'Ej. ABC-123',
                     ),
+                    onChanged: (value) {
+                      _patente = value.toUpperCase(); // Convertir a mayúsculas
+                    },
                   ),
                   const SizedBox(height: 18),
                   TextFormField(
@@ -77,6 +93,9 @@ class EditarPage extends StatelessWidget {
                       label: 'Color',
                       hint: 'Ej. Blanco',
                     ),
+                    onChanged: (value) {
+                      _color = value;
+                    },
                   ),
                   const SizedBox(height: 18),
                   TextFormField(
@@ -88,6 +107,9 @@ class EditarPage extends StatelessWidget {
                       label: 'Marca',
                       hint: 'Ej. Toyota',
                     ),
+                    onChanged: (value) {
+                      _marca = value;
+                    },
                   ),
                   const SizedBox(height: 18),
                   TextFormField(
@@ -99,6 +121,7 @@ class EditarPage extends StatelessWidget {
                       label: 'Año',
                       hint: 'Ej. 2024',
                     ),
+                  
                   ),
                   const SizedBox(height: 18),
                   TextFormField(
@@ -110,7 +133,24 @@ class EditarPage extends StatelessWidget {
                       label: 'Tipo de vehículo',
                       hint: 'Ej. Sedán, SUV o camioneta',
                     ),
+                    onChanged: (value) {
+                      _tipoVehiculo = value;
+                    },
                   ),
+                  Divider(height: 32, thickness: 1.5, color: Colors.grey.shade300),
+                  ElevatedButton(onPressed: (){
+                    if(_modelo.isEmpty || _patente.isEmpty || _color.isEmpty || _marca.isEmpty || _tipoVehiculo.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Por favor, complete todos los campos.')),
+                      );
+                    } else {
+                      // Aquí puedes guardar los datos del vehículo
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Datos del vehículo guardados correctamente.')),
+                      );
+                    }
+                  }, 
+                  child: Text('Guardar cambios', style: TextStyle(fontSize: 16))),  
                 ],
               ),
             ),
