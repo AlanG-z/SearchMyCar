@@ -1,8 +1,11 @@
 import 'package:dondeestacione/src/Routes/app_routes.dart';
+import 'package:dondeestacione/src/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
 class InicioPage extends StatefulWidget {
-  const InicioPage({super.key});
+  const InicioPage({required this.authService, super.key});
+
+  final AuthService authService;
 
   @override
   State<InicioPage> createState() => _InicioPageState();
@@ -17,6 +20,8 @@ class _InicioPageState extends State<InicioPage> {
   final TextEditingController _passwordController = TextEditingController();
 
   bool _hidePassword = true;
+  bool _isLoading = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -25,14 +30,53 @@ class _InicioPageState extends State<InicioPage> {
     super.dispose();
   }
 
-  void _iniciarSesion() {
+  Future<void> _iniciarSesion() async {
+    if (_isLoading) {
+      return;
+    }
+
     FocusManager.instance.primaryFocus?.unfocus();
 
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    Navigator.of(context).pushReplacementNamed(AppRoutes.mapa);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      await widget.authService.iniciarSesion(
+        correo: _emailController.text,
+        contrasena: _passwordController.text,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.of(context).pushReplacementNamed(AppRoutes.mapa);
+    } on AuthFailure catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isLoading = false;
+        _errorMessage = error.message;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isLoading = false;
+        _errorMessage =
+            'Ocurrió un error inesperado. Inténtalo de nuevo más tarde.';
+      });
+    }
   }
 
   String? _validarCorreo(String? value) {
@@ -152,6 +196,7 @@ class _InicioPageState extends State<InicioPage> {
                                       TextFormField(
                                         key: emailFieldKey,
                                         controller: _emailController,
+                                        enabled: !_isLoading,
                                         keyboardType:
                                             TextInputType.emailAddress,
                                         textInputAction: TextInputAction.next,
@@ -159,6 +204,13 @@ class _InicioPageState extends State<InicioPage> {
                                           AutofillHints.email,
                                         ],
                                         autocorrect: false,
+                                        onChanged: (_) {
+                                          if (_errorMessage != null) {
+                                            setState(() {
+                                              _errorMessage = null;
+                                            });
+                                          }
+                                        },
                                         decoration: const InputDecoration(
                                           labelText: 'Correo electrónico',
                                           hintText: 'nombre@correo.com',
@@ -173,24 +225,36 @@ class _InicioPageState extends State<InicioPage> {
                                       TextFormField(
                                         key: passwordFieldKey,
                                         controller: _passwordController,
+                                        enabled: !_isLoading,
                                         obscureText: _hidePassword,
                                         textInputAction: TextInputAction.done,
                                         autofillHints: const [
                                           AutofillHints.password,
                                         ],
-                                        onFieldSubmitted: (_) =>
-                                            _iniciarSesion(),
+                                        onChanged: (_) {
+                                          if (_errorMessage != null) {
+                                            setState(() {
+                                              _errorMessage = null;
+                                            });
+                                          }
+                                        },
+                                        onFieldSubmitted: _isLoading
+                                            ? null
+                                            : (_) => _iniciarSesion(),
                                         decoration: InputDecoration(
                                           labelText: 'Contraseña',
                                           prefixIcon: const Icon(
                                             Icons.lock_outline,
                                           ),
                                           suffixIcon: IconButton(
-                                            onPressed: () {
-                                              setState(() {
-                                                _hidePassword = !_hidePassword;
-                                              });
-                                            },
+                                            onPressed: _isLoading
+                                                ? null
+                                                : () {
+                                                    setState(() {
+                                                      _hidePassword =
+                                                          !_hidePassword;
+                                                    });
+                                                  },
                                             tooltip: _hidePassword
                                                 ? 'Mostrar contraseña'
                                                 : 'Ocultar contraseña',
@@ -205,17 +269,54 @@ class _InicioPageState extends State<InicioPage> {
                                         ),
                                         validator: _validarContrasena,
                                       ),
-                                      const SizedBox(height: 24),
-                                      FilledButton.icon(
-                                        onPressed: _iniciarSesion,
-                                        icon: const Icon(Icons.login),
-                                        label: const Text('Iniciar sesión'),
+                                      const SizedBox(height: 20),
+                                      if (_errorMessage != null) ...[
+                                        Container(
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red.shade50,
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.red.shade200,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Icon(
+                                                Icons.error_outline,
+                                                color: Colors.red.shade700,
+                                                size: 20,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  _errorMessage!,
+                                                  style: TextStyle(
+                                                    color: Colors.red.shade900,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 16),
+                                      ],
+                                      FilledButton(
+                                        onPressed: _isLoading
+                                            ? null
+                                            : _iniciarSesion,
                                         style: FilledButton.styleFrom(
                                           minimumSize: const Size.fromHeight(
                                             52,
                                           ),
                                           backgroundColor:
                                               Colors.orange.shade700,
+                                          disabledBackgroundColor:
+                                              Colors.orange.shade300,
                                           foregroundColor: Colors.white,
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(
@@ -223,10 +324,35 @@ class _InicioPageState extends State<InicioPage> {
                                             ),
                                           ),
                                         ),
+                                        child: _isLoading
+                                            ? const SizedBox(
+                                                width: 22,
+                                                height: 22,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 2.5,
+                                                      color: Colors.white,
+                                                    ),
+                                              )
+                                            : const Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.login),
+                                                  SizedBox(width: 8),
+                                                  Text('Iniciar sesión'),
+                                                ],
+                                              ),
                                       ),
                                     ],
                                   ),
                                 ),
+                              ),
+                              const SizedBox(height: 20),
+                              Text(
+                                'Ingresa con una cuenta creada en Supabase.',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: Colors.blueGrey.shade500),
                               ),
                             ],
                           ),

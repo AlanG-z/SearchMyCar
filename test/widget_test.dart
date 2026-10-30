@@ -1,9 +1,42 @@
 import 'package:dondeestacione/src/app.dart';
+import 'package:dondeestacione/src/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _emailField = Key('login-email-field');
 const _passwordField = Key('login-password-field');
+
+class _FakeAuthService implements AuthService {
+  _FakeAuthService({this.error});
+
+  final String? error;
+  int llamadas = 0;
+  String? correoRecibido;
+  String? contrasenaRecibida;
+
+  @override
+  Future<void> iniciarSesion({
+    required String correo,
+    required String contrasena,
+  }) async {
+    llamadas++;
+    correoRecibido = correo;
+    contrasenaRecibida = contrasena;
+
+    if (error != null) {
+      throw AuthFailure(error!);
+    }
+  }
+}
+
+Future<_FakeAuthService> _mostrarApp(
+  WidgetTester tester, {
+  String? errorDeAcceso,
+}) async {
+  final authService = _FakeAuthService(error: errorDeAcceso);
+  await tester.pumpWidget(MyApp(authService: authService));
+  return authService;
+}
 
 Future<void> iniciarSesion(WidgetTester tester) async {
   await tester.enterText(find.byKey(_emailField), 'conductor@searchmycar.com');
@@ -14,7 +47,7 @@ Future<void> iniciarSesion(WidgetTester tester) async {
 
 void main() {
   testWidgets('muestra el acceso y valida los campos', (tester) async {
-    await tester.pumpWidget(const MyApp());
+    final authService = await _mostrarApp(tester);
 
     expect(find.text('SearchMyCar'), findsOneWidget);
     expect(find.byKey(_emailField), findsOneWidget);
@@ -29,19 +62,48 @@ void main() {
     expect(find.text('Ingresa tu correo electrónico'), findsOneWidget);
     expect(find.text('Ingresa tu contraseña'), findsOneWidget);
     expect(find.text('Guardar ubicación'), findsNothing);
+    expect(authService.llamadas, 0);
   });
 
-  testWidgets('permite ingresar y abre el mapa', (tester) async {
-    await tester.pumpWidget(const MyApp());
+  testWidgets('envía las credenciales y abre el mapa', (tester) async {
+    final authService = await _mostrarApp(tester);
 
     await iniciarSesion(tester);
 
+    expect(authService.llamadas, 1);
+    expect(authService.correoRecibido, 'conductor@searchmycar.com');
+    expect(authService.contrasenaRecibida, '123456');
     expect(find.text('Guardar ubicación'), findsOneWidget);
     expect(find.text('Mapa'), findsWidgets);
   });
 
+  testWidgets('muestra el error cuando Supabase rechaza el acceso', (
+    tester,
+  ) async {
+    await _mostrarApp(
+      tester,
+      errorDeAcceso: 'Correo o contraseña incorrectos.',
+    );
+
+    await iniciarSesion(tester);
+
+    expect(find.text('Correo o contraseña incorrectos.'), findsOneWidget);
+    expect(find.text('Guardar ubicación'), findsNothing);
+  });
+
+  testWidgets('abre directamente el mapa si ya hay una sesión activa', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MyApp(authService: _FakeAuthService(), isAuthenticated: true),
+    );
+
+    expect(find.text('Guardar ubicación'), findsOneWidget);
+    expect(find.text('Iniciar sesión'), findsNothing);
+  });
+
   testWidgets('la barra inferior abre cada página', (tester) async {
-    await tester.pumpWidget(const MyApp());
+    await _mostrarApp(tester);
     await iniciarSesion(tester);
 
     Finder navigationIcon(IconData icon) {
@@ -61,7 +123,7 @@ void main() {
 
     await tester.tap(navigationIcon(Icons.edit_outlined));
     await tester.pumpAndSettle();
-    expect(find.text('Editar vehículo'), findsOneWidget);
+    expect(find.text('Guardar datos del vehículo'), findsOneWidget);
     expect(
       find.byKey(const Key('vehicle-model-field'), skipOffstage: false),
       findsOneWidget,
