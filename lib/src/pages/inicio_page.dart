@@ -347,9 +347,23 @@ class _InicioPageState extends State<InicioPage> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 20),
+                              const SizedBox(height: 12),
+                              Wrap(
+                                alignment: WrapAlignment.center,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  const Text('¿No tienes cuenta?'),
+                                  TextButton(
+                                    onPressed: _isLoading
+                                        ? null
+                                        : () => Navigator.of(context)
+                                              .pushNamed(AppRoutes.registro),
+                                    child: const Text('Regístrate'),
+                                  ),
+                                ],
+                              ),
                               Text(
-                                'Ingresa con una cuenta creada en Supabase.',
+                                'Usa el correo y la contraseña de tu cuenta.',
                                 textAlign: TextAlign.center,
                                 style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(color: Colors.blueGrey.shade500),

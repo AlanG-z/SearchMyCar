@@ -38,9 +38,9 @@ class MainBottomNavigation extends StatelessWidget {
               label: 'Mapa',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.edit_outlined),
-              activeIcon: Icon(Icons.edit),
-              label: 'Editar',
+              icon: Icon(Icons.garage_outlined),
+              activeIcon: Icon(Icons.garage),
+              label: 'Vehículos',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.assignment_outlined),

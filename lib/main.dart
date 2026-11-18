@@ -5,11 +5,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await SupabaseConfig.cargar();
 
   if (!SupabaseConfig.estaConfigurado) {
     runApp(
       const _AvisoConfiguracion(
-        mensaje: 'Abre lib/src/config/supabase_config.dart y coloca la URL y la clave pública de tu proyecto.',
+        mensaje: 'Copia .env.example a .env y coloca la URL y la clave pública de tu proyecto.',
       ),
     );
     return;

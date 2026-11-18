@@ -46,3 +46,7 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Variables de entorno locales (URL y clave pública de Supabase).
+# Usa .env.example como plantilla.
+.env
