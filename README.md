@@ -58,7 +58,7 @@ La segunda migración:
 
 - Crea la tabla `public.ubicaciones` con latitud, longitud, precisión y fecha.
 - Relaciona cada ubicación con un vehículo del mismo usuario.
-- Activa RLS para que cada usuario solo vea y guarde sus propias ubicaciones.
+- Activa RLS para que cada usuario solo vea, guarde y elimine sus propias ubicaciones.
 - Impide guardar una ubicación usando el vehículo de otra cuenta.
 
 Ambas son idempotentes, así que puedes ejecutarlas más de una vez sin problema. Si ya tenías
@@ -77,6 +77,8 @@ OpenStreetMap y la geolocalización del dispositivo mediante `geolocator`.
   ubicación actual y el vehículo seleccionado.
 - La pestaña **Registros** muestra el historial de ubicaciones guardadas, con vehículo,
   fecha, coordenadas y precisión.
+- Toca una ubicación del historial para verla en el mapa, centrada en ese punto.
+- Usa el ícono de papelera y confirma para eliminar una ubicación del historial.
 - Si no tienes vehículos, el mapa ofrece un botón para agregar uno.
 
 En Android ya están declarados los permisos `ACCESS_FINE_LOCATION` y `ACCESS_COARSE_LOCATION`.
@@ -101,7 +103,8 @@ URL en `lib/src/pages/mapa_page.dart`.
 5. Toca un vehículo o su menú para editarlo o eliminarlo.
 6. Vuelve a **Mapa**, elige el vehículo en uso y pulsa **Guardar ubicación**.
 7. Entra a **Registros** para ver el historial de ubicaciones guardadas.
-8. En **Ajustes** puedes ver la cuenta activa y cerrar sesión.
+8. Toca una ubicación para verla en el mapa o usa la papelera para eliminarla.
+9. En **Ajustes** puedes ver la cuenta activa y cerrar sesión.
 
 ## Ejecutar
 

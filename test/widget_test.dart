@@ -193,6 +193,7 @@ class _FakeUbicacionService implements UbicacionService {
   >
   guardadas = [];
   int listados = 0;
+  final List<String> eliminados = [];
   int _siguienteId = 1;
 
   @override
@@ -225,6 +226,12 @@ class _FakeUbicacionService implements UbicacionService {
   Future<List<UbicacionGuardada>> listar() async {
     listados++;
     return List<UbicacionGuardada>.unmodifiable(_ubicaciones);
+  }
+
+  @override
+  Future<void> eliminar(String id) async {
+    eliminados.add(id);
+    _ubicaciones.removeWhere((ubicacion) => ubicacion.id == id);
   }
 }
 
@@ -440,6 +447,72 @@ void main() {
     expect(find.textContaining('-34.60370'), findsOneWidget);
     expect(find.textContaining('Precisión ±12 m'), findsOneWidget);
     expect(find.textContaining('09/11/2026'), findsOneWidget);
+  });
+
+  testWidgets('abre una ubicación pasada en el mapa y permite eliminarla', (
+    tester,
+  ) async {
+    final vehiculo = Vehiculo(
+      id: 'vehiculo-1',
+      categoria: CategoriaVehiculo.auto,
+      marca: 'Toyota',
+      modelo: 'Corolla',
+      patente: 'ABC-123',
+      color: 'Blanco',
+      anio: 2022,
+    );
+    final ubicacionService = _FakeUbicacionService(
+      ubicaciones: [
+        UbicacionGuardada(
+          id: 'ubicacion-1',
+          vehiculoId: 'vehiculo-1',
+          latitud: -34.6037,
+          longitud: -58.3816,
+          precisionMetros: 12,
+          creadoEn: DateTime(2026, 11, 9, 14, 30),
+        ),
+      ],
+    );
+
+    await _mostrarApp(
+      tester,
+      vehiculoService: _FakeVehiculoService(vehiculos: [vehiculo]),
+      ubicacionService: ubicacionService,
+    );
+    await iniciarSesion(tester);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(BottomNavigationBar),
+        matching: find.byIcon(Icons.assignment_outlined),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('historial-ubicacion-ubicacion-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ubicación guardada'), findsOneWidget);
+    expect(find.byType(FlutterMap), findsOneWidget);
+    expect(find.text('Latitud -34.60370'), findsOneWidget);
+    expect(find.text('Longitud -58.38160'), findsOneWidget);
+    expect(find.text('Toyota Corolla'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('historial-eliminar-ubicacion-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Eliminar ubicación'), findsOneWidget);
+    expect(ubicacionService.eliminados, isEmpty);
+
+    await tester.tap(find.byKey(const Key('historial-confirmar-eliminar')));
+    await tester.pumpAndSettle();
+
+    expect(ubicacionService.eliminados, ['ubicacion-1']);
+    expect(find.text('Aún no hay ubicaciones guardadas'), findsOneWidget);
+    expect(find.text('Ubicación eliminada.'), findsOneWidget);
   });
 
   testWidgets('avisa cuando el permiso de ubicación está bloqueado', (

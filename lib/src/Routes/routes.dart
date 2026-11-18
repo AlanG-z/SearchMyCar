@@ -33,6 +33,7 @@ Map<String, WidgetBuilder> getAplicationRoutes({
     AppRoutes.registros: (context) => HistorialPage(
       ubicacionService: ubicacionService,
       vehiculoService: vehiculoService,
+      tileProvider: mapaTileProvider,
     ),
     AppRoutes.ajustes: (context) => ConfiguracionPage(authService: authService),
   };

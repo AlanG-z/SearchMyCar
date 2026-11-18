@@ -10,6 +10,8 @@ abstract interface class UbicacionService {
   });
 
   Future<List<UbicacionGuardada>> listar();
+
+  Future<void> eliminar(String id);
 }
 
 class UbicacionFailure implements Exception {
@@ -92,6 +94,27 @@ class SupabaseUbicacionService implements UbicacionService {
     }
   }
 
+  @override
+  Future<void> eliminar(String id) async {
+    try {
+      final usuario = _usuarioActual();
+
+      await _cliente
+          .from(_tabla)
+          .delete()
+          .eq('id', id)
+          .eq('user_id', usuario.id);
+    } on UbicacionFailure {
+      rethrow;
+    } on PostgrestException catch (error) {
+      throw UbicacionFailure(_mensajeDeEliminacion(error));
+    } catch (_) {
+      throw const UbicacionFailure(
+        'No se pudo eliminar la ubicación. Revisa tu conexión e inténtalo de nuevo.',
+      );
+    }
+  }
+
   String _mensajeDeError(PostgrestException error) {
     return switch (error.code) {
       '23503' => 'El vehículo seleccionado ya no existe. Actualiza la lista e inténtalo de nuevo.',
@@ -99,6 +122,14 @@ class SupabaseUbicacionService implements UbicacionService {
       '42501' => 'No tienes permiso para guardar esta ubicación.',
       '42P01' || 'PGRST204' || 'PGRST205' => 'Falta actualizar la base de datos. Ejecuta la migración de ubicaciones.',
       _ => 'No se pudo guardar la ubicación. Inténtalo de nuevo.',
+    };
+  }
+
+  String _mensajeDeEliminacion(PostgrestException error) {
+    return switch (error.code) {
+      '42501' => 'No tienes permiso para eliminar esta ubicación.',
+      '42P01' || 'PGRST204' || 'PGRST205' => 'Falta actualizar la base de datos. Ejecuta la migración de ubicaciones.',
+      _ => 'No se pudo eliminar la ubicación. Inténtalo de nuevo.',
     };
   }
 

@@ -1,20 +1,24 @@
 import 'package:dondeestacione/src/Routes/app_routes.dart';
 import 'package:dondeestacione/src/models/ubicacion.dart';
 import 'package:dondeestacione/src/models/vehiculo.dart';
+import 'package:dondeestacione/src/pages/ubicacion_detalle_page.dart';
 import 'package:dondeestacione/src/services/ubicacion_service.dart';
 import 'package:dondeestacione/src/services/vehiculo_service.dart';
 import 'package:dondeestacione/src/widgets/main_bottom_navigation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 
 class HistorialPage extends StatefulWidget {
   const HistorialPage({
     required this.ubicacionService,
     required this.vehiculoService,
+    this.tileProvider,
     super.key,
   });
 
   final UbicacionService ubicacionService;
   final VehiculoService vehiculoService;
+  final TileProvider? tileProvider;
 
   @override
   State<HistorialPage> createState() => _HistorialPageState();
@@ -23,6 +27,7 @@ class HistorialPage extends StatefulWidget {
 class _HistorialPageState extends State<HistorialPage> {
   List<UbicacionGuardada> _ubicaciones = const [];
   Map<String, Vehiculo> _vehiculosPorId = const {};
+  final Set<String> _eliminando = <String>{};
   bool _cargando = true;
   String? _error;
 
@@ -88,6 +93,117 @@ class _HistorialPageState extends State<HistorialPage> {
         _cargando = false;
         _error = 'No se pudo cargar el historial de ubicaciones.';
       });
+    }
+  }
+
+  Future<void> _abrirDetalle(UbicacionGuardada ubicacion, Vehiculo? vehiculo) {
+    return Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => UbicacionDetallePage(
+          ubicacion: ubicacion,
+          vehiculo: vehiculo,
+          tileProvider: widget.tileProvider,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmarEliminacion(
+    UbicacionGuardada ubicacion,
+    Vehiculo? vehiculo,
+  ) async {
+    if (_eliminando.contains(ubicacion.id)) {
+      return;
+    }
+
+    final nombre = vehiculo == null ? '' : ' de ${vehiculo.nombre}';
+
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Eliminar ubicación'),
+          content: Text(
+            'Se eliminará la ubicación$nombre guardada el '
+            '${_formatearFecha(ubicacion.creadoEn)}.\n\n'
+            'Esta acción no se puede deshacer.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              key: const Key('historial-confirmar-eliminar'),
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.red.shade700,
+              ),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Eliminar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmado != true || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _eliminando.add(ubicacion.id);
+    });
+
+    try {
+      await widget.ubicacionService.eliminar(ubicacion.id);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _ubicaciones = _ubicaciones
+            .where((guardada) => guardada.id != ubicacion.id)
+            .toList(growable: false);
+        _eliminando.remove(ubicacion.id);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ubicación eliminada.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } on UbicacionFailure catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _eliminando.remove(ubicacion.id);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.message),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _eliminando.remove(ubicacion.id);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo eliminar la ubicación.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -220,81 +336,122 @@ class _HistorialPageState extends State<HistorialPage> {
 
           return Card(
             elevation: 2,
+            clipBehavior: Clip.antiAlias,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CircleAvatar(
-                    radius: 24,
-                    backgroundColor: color.withValues(alpha: 0.12),
-                    child: Icon(_iconoCategoria(categoria), color: color),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          nombreVehiculo,
-                          style: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          detalleVehiculo,
-                          style: TextStyle(color: Colors.blueGrey.shade600),
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.schedule,
-                              size: 16,
-                              color: Colors.blueGrey.shade500,
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                _formatearFecha(ubicacion.creadoEn),
-                                style: TextStyle(
-                                  color: Colors.blueGrey.shade600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(
-                              Icons.my_location,
-                              size: 16,
-                              color: Colors.orange.shade800,
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                '${ubicacion.latitud.toStringAsFixed(5)}, '
-                                '${ubicacion.longitud.toStringAsFixed(5)}\n'
-                                '${_textoPrecision(ubicacion.precisionMetros)}',
-                                style: TextStyle(
-                                  color: Colors.blueGrey.shade800,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+            child: InkWell(
+              key: Key('historial-ubicacion-${ubicacion.id}'),
+              onTap: () => _abrirDetalle(ubicacion, vehiculo),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 6, 16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundColor: color.withValues(alpha: 0.12),
+                      child: Icon(_iconoCategoria(categoria), color: color),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            nombreVehiculo,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            detalleVehiculo,
+                            style: TextStyle(color: Colors.blueGrey.shade600),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.schedule,
+                                size: 16,
+                                color: Colors.blueGrey.shade500,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  _formatearFecha(ubicacion.creadoEn),
+                                  style: TextStyle(
+                                    color: Colors.blueGrey.shade600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.my_location,
+                                size: 16,
+                                color: Colors.orange.shade800,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  '${ubicacion.latitud.toStringAsFixed(5)}, '
+                                  '${ubicacion.longitud.toStringAsFixed(5)}\n'
+                                  '${_textoPrecision(ubicacion.precisionMetros)}',
+                                  style: TextStyle(
+                                    color: Colors.blueGrey.shade800,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.map_outlined,
+                                size: 14,
+                                color: Colors.orange.shade800,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Toca para verlo en el mapa',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.orange.shade900,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      key: Key('historial-eliminar-${ubicacion.id}'),
+                      tooltip: 'Eliminar ubicación',
+                      onPressed: _eliminando.contains(ubicacion.id)
+                          ? null
+                          : () => _confirmarEliminacion(ubicacion, vehiculo),
+                      icon: _eliminando.contains(ubicacion.id)
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Icon(
+                              Icons.delete_outline,
+                              color: Colors.red.shade700,
+                            ),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
