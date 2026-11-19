@@ -48,7 +48,7 @@ class UbicacionDetallePage extends StatelessWidget {
       return 'Precisión no disponible';
     }
 
-    return 'Precisión ±${precision.round()} m';
+    return 'Precisión ${precision.round()} m';
   }
 
   Widget _filaDato(IconData icono, String texto, Color color) {

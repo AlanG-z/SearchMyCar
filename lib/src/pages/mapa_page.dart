@@ -487,7 +487,7 @@ class _MapaPageState extends State<MapaPage> {
 
     final precision = ubicacion.precisionMetros <= 0
         ? 'sin precisión estimada'
-        : 'precisión ±${ubicacion.precisionMetros.round()} m';
+        : 'precisión ${ubicacion.precisionMetros.round()} m';
 
     return '${ubicacion.latitud.toStringAsFixed(5)}, '
         '${ubicacion.longitud.toStringAsFixed(5)} · $precision';
